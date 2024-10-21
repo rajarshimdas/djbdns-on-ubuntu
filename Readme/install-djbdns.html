@@ -1,0 +1,70 @@
+
+<!-- saved from url=(0036)https://cr.yp.to/djbdns/install.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252"></head><body>
+<a href="https://cr.yp.to/djb.html">D. J. Bernstein</a>
+<br><a href="https://cr.yp.to/web.html">Internet publication</a>
+<br><a href="https://cr.yp.to/djbdns.html">djbdns</a>
+<h1>How to install djbdns</h1>
+Like any other piece of software (and information generally),
+djbdns comes with NO WARRANTY.
+Exception: See the
+<a href="https://cr.yp.to/djbdns/guarantee.html">djbdns security guarantee</a>.
+<p>
+djbdns works only under UNIX.
+One UNIX flavor, SCO UnixWare, is not supported at this time.
+</p><p>
+Before installing djbdns,
+install <a href="https://cr.yp.to/daemontools/install.html">daemontools</a> 0.70 or above,
+and install <a href="https://cr.yp.to/ucspi-tcp/install.html">ucspi-tcp</a>.
+</p><p>
+As you go through the installation and configuration process,
+please keep notes of exactly what you did
+and exactly what the computer did.
+Put the notes on your web pages,
+and include the URL with any questions that you send to the
+<a href="https://cr.yp.to/lists.html#dns">dns mailing list</a>.
+</p><p>
+1. If you would like a local copy of these web pages,
+download the
+<a href="https://cr.yp.to/djbdns/doc.tar.gz">djbdns documentation package</a>
+and unpack it under
+under <a href="https://cr.yp.to/slashdoc.html"><tt>/doc</tt></a>:
+</p><pre>     gunzip &lt; doc.tar.gz | (cd /; tar -xf -)
+</pre>
+Then run
+<a href="https://cr.yp.to/slashdoc/slashdoc-merge">slashdoc-merge</a>
+to create indices such as <tt>/doc/commands.html</tt>.
+<p>
+2. Download the djbdns package.
+The latest published djbdns package is
+<a href="https://cr.yp.to/djbdns/djbdns-1.05.tar.gz">djbdns-1.05.tar.gz</a>.
+</p><p>
+3. Unpack the djbdns package:
+</p><pre>     gunzip djbdns-1.05.tar
+     tar -xf djbdns-1.05.tar
+     cd djbdns-1.05
+</pre>
+<p>
+4. Compile the djbdns programs:
+</p><pre>     echo gcc -O2 -include /usr/include/errno.h &gt; conf-cc
+     make
+</pre>
+The first line, modifying <tt>conf-cc</tt>,
+is necessary for some Linux systems, to work around a
+<a href="https://cr.yp.to/docs/unixport.html#errno">Linux bug</a>.
+It can be skipped under BSD, Solaris, and other systems
+that comply with IEEE Std 1003.1-1990.
+<p>
+5. As root, install the djbdns programs
+under <tt>/usr/local</tt>:
+</p><pre>     make setup check
+</pre>
+<p>
+6. Report success:
+</p><pre>     ( echo 'First M. Last'; cat `cat SYSDEPS` ) \
+     | mail djb-sysdeps@cr.yp.to
+</pre>
+Replace <tt>First M. Last</tt> with your name.
+
+
+</body></html>

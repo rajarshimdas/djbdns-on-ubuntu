@@ -1,0 +1,95 @@
+
+<!-- saved from url=(0040)https://cr.yp.to/djbdns/run-cache-x.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252"></head><body>
+<a href="https://cr.yp.to/djb.html">D. J. Bernstein</a>
+<br><a href="https://cr.yp.to/web.html">Internet publication</a>
+<br><a href="https://cr.yp.to/djbdns.html">djbdns</a>
+<h1>How to run an external cache for your network</h1>
+Here is how to set up your computer
+so that it can find addresses of Internet hosts.
+<p>
+With these instructions,
+your computer will run an external cache
+that other computers can use.
+In contrast, with the
+<a href="https://cr.yp.to/djbdns/run-cache.html">workstation</a> instructions,
+your computer's cache will be used only by your computer.
+</p><p>
+These instructions assume that you have already
+<a href="https://cr.yp.to/djbdns/install.html">installed</a> daemontools and djbdns,
+and that <tt>svscan</tt> is already running.
+</p><p>
+1. Check that your computer can talk to DNS servers around the Internet:
+</p><pre>     dnsq a www.aol.com 192.203.230.10
+     dnsq a www.aol.com 192.48.79.30
+</pre>
+Normally each <tt>dnsq</tt> command will instantly print various lines
+such as ``authority: aol.com 172800 NS dns-07.ns.aol.com.''
+If <tt>dnsq</tt> instead pauses for a minute and prints ``timed out,''
+your computer is not properly attached to the Internet
+(or some of the Internet's central servers are down, which is unlikely).
+You may have a firewall interfering with your computer's Internet access;
+if so, tell your firewall to allow UDP and TCP
+from this computer's ports 1024 through 65535
+to any computer's port 53.
+<p>
+2. As root, create UNIX accounts named <tt>Gdnscache</tt> and <tt>Gdnslog</tt>.
+</p><p>
+3. Figure out the IP address that you want to use for your external cache.
+This address must be configured on your computer
+and accessible to the other computers on your network.
+The following instructions assume that
+your network uses private 10.* addresses
+and that your external cache will use the address 10.53.0.1.
+</p><p>
+4. As root, create an <tt>/etc/dnscache</tt> service directory,
+with your IP address on the end of the line:
+</p><pre>     dnscache-conf Gdnscache Gdnslog /etc/dnscache 10.53.0.1
+</pre>
+This directory contains logs and a few configuration files
+that you can change later.
+<p>
+5. As root, tell <tt>svscan</tt> about the new service,
+and use <tt>svstat</tt> to check that the service is up:
+</p><pre>     ln -s /etc/dnscache /service/dnscache
+     sleep 5
+     svstat /service/dnscache
+</pre>
+<p>
+6. As root, create entries in <tt>/etc/dnscache/root/ip</tt>
+showing which client IP addresses are authorized to use this cache.
+For example,
+</p><pre>     touch /etc/dnscache/root/ip/10
+</pre>
+authorizes all clients with IP address 10.* to use this cache.
+You can add or remove addresses later.
+<p>
+7. Whenever you add a client computer, set it up to
+<a href="https://cr.yp.to/djbdns/run-cache-none.html">use this external cache</a>:
+as root, on the client computer,
+put
+</p><pre>     nameserver 10.53.0.1
+</pre>
+into <tt>/etc/resolv.conf</tt>,
+replacing any previous <tt>nameserver</tt> lines.
+<p>
+8. Check whether your computers can look up addresses of some Internet hosts:
+</p><pre>     dnsip www.cnn.com
+     dnsip www.fsf.org
+</pre>
+Then try surfing the web.
+If you want to see what <tt>dnscache</tt> is doing behind the scenes,
+read <tt>/service/dnscache/log/main/current</tt>.
+<p>
+9. Set up a public web page saying that your DNS cache is powered by djbdns,
+so that a
+<a href="http://www.google.com/">Google</a> search
+for <tt>powered djbdns</tt> will find your page in a few months.
+These public statements will encourage other people to deploy djbdns,
+provide djbdns support services,
+and develop djbdns-related tools.
+Please also consider making a donation to the
+<a href="https://cr.yp.to/donations.html#writing">Bernstein Writing Fund</a>.
+
+
+</p></body></html>

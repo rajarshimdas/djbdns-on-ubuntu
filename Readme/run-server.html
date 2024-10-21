@@ -1,0 +1,503 @@
+
+<!-- saved from url=(0039)https://cr.yp.to/djbdns/run-server.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252"></head><body>
+<a href="https://cr.yp.to/djb.html">D. J. Bernstein</a>
+<br><a href="https://cr.yp.to/web.html">Internet publication</a>
+<br><a href="https://cr.yp.to/djbdns.html">djbdns</a>
+<h1>How to run a DNS server</h1>
+Here is how to set up your computer
+so that it publishes your IP addresses.
+If you're upgrading from a BIND DNS server,
+you should follow the
+<a href="https://cr.yp.to/djbdns/run-server-bind.html">upgrade</a> instructions instead.
+<p>
+These instructions assume that you have already
+<a href="https://cr.yp.to/djbdns/install.html">installed</a> daemontools and djbdns,
+and that <tt>svscan</tt> is already running.
+</p><p>
+1. As root, create UNIX accounts named <tt>Gtinydns</tt> and <tt>Gdnslog</tt>.
+</p><p>
+2. As root, create an <tt>/etc/tinydns</tt> service directory
+configured with the IP address of the DNS server:
+</p><pre>     tinydns-conf Gtinydns Gdnslog /etc/tinydns 1.8.7.200
+</pre>
+This directory contains logs and configuration files
+that you will change later.
+<p>
+The IP address must be configured on this computer.
+The IP address must not have a DNS cache or any other port-53 service.
+One computer can run a DNS server alongside a DNS cache
+as long as they are on separate IP addresses.
+The standard setup for small networks
+is to put a DNS cache
+on a private address such as 127.0.0.1 or 10.53.0.1,
+and a DNS server on a public address.
+</p><p>
+3. As root, tell <tt>svscan</tt> about the new service,
+and use <tt>svstat</tt> to check that the service is up:
+</p><pre>     ln -s /etc/tinydns /service/tinydns
+     sleep 5
+     svstat /service/tinydns
+</pre>
+<p>
+4. Set up your desired DNS data, as described on the rest of this page.
+</p><p>
+5. Set up a public web page saying that your DNS server is powered by djbdns,
+so that a
+<a href="http://www.google.com/">Google</a> search
+for <tt>powered djbdns</tt> will find your page in a few months.
+These public statements will encourage other people to deploy djbdns,
+provide djbdns support services,
+and develop djbdns-related tools.
+Please also consider making a donation to the
+<a href="https://cr.yp.to/donations.html#writing">Bernstein Writing Fund</a>.
+</p><h2><a name="replicate"></a>Replicating your DNS service</h2>
+Here is how to set up a second computer as a DNS server
+providing the same information as your first DNS server.
+DNS caches around the Internet will try both servers (in a random order),
+so they will receive answers even if one server crashes.
+<p>
+You don't have to set up two DNS servers.
+Your DNS servers don't have to be more highly replicated
+than your web servers, mail servers, etc.
+As an extreme,
+if you have just one computer for your web server, mail server, and DNS server,
+then setting up a second DNS server is silly.
+(<a href="https://cr.yp.to/djbdns/third-party.html">Third-party DNS servers</a>
+are almost always a bad idea.)
+However, if you're running a large site with many services,
+you should set up two DNS servers.
+</p><p>
+For concreteness,
+these instructions assume that
+your first DNS server is on IP address 1.8.7.200,
+and that the second computer has IP address 1.8.7.201.
+</p><p>
+1. On the second computer, as root,
+create UNIX accounts named <tt>Gtinydns</tt> and <tt>Gdnslog</tt>.
+</p><p>
+2. On the second computer, as root,
+create an <tt>/etc/tinydns</tt> service directory
+configured with the second IP address:
+</p><pre>     tinydns-conf Gtinydns Gdnslog /etc/tinydns 1.8.7.201
+</pre>
+<p>
+3. On the first computer, as root,
+edit <tt>/service/tinydns/root/Makefile</tt>
+to replicate <tt>/service/tinydns/root/data</tt>
+from the first computer to the second:
+</p><pre>     remote: data.cdb
+             rsync -az -e ssh data.cdb 1.8.7.201:/service/tinydns/root/data.cdb
+
+     data.cdb: data
+             /usr/local/bin/tinydns-data
+</pre>
+Alternatively, if you don't have rsync:
+<pre>     remote: data.cdb
+             scp data.cdb 1.8.7.201:/service/tinydns/root/data.cdb.tmp
+             ssh 1.8.7.201 mv /service/tinydns/root/data.cdb.tmp \
+             /service/tinydns/root/data.cdb
+
+     data.cdb: data
+             /usr/local/bin/tinydns-data
+</pre>
+Now any changes made on the first computer
+will be copied to the second.
+<p>
+4. On the second computer, as root,
+edit <tt>/service/tinydns/root/data</tt> to remind yourself
+that DNS data is replicated from the first computer to the second:
+</p><pre>     # Do not edit data on this computer! data.cdb is copied from 1.8.7.200.
+     # The following line protects data.cdb by stopping make.
+     9
+</pre>
+<p>
+5. On the second computer, as root,
+tell <tt>svscan</tt> about the new service,
+and use <tt>svstat</tt> to check that the service is up:
+</p><pre>     ln -s /etc/tinydns /service/tinydns
+     sleep 5
+     svstat /service/tinydns
+</pre>
+<h2>Receiving delegations</h2>
+There are two crucial steps in arranging for a name
+to be delegated to and handled by your DNS servers.
+There are separate web pages
+explaining the two steps of this process in more detail for
+<a href="https://cr.yp.to/djbdns/dot-com.html">.com and .net and .org</a>,
+<a href="https://cr.yp.to/djbdns/dot-at.html">.at</a>,
+<a href="https://cr.yp.to/djbdns/dot-br.html">.br</a>,
+<a href="https://cr.yp.to/djbdns/dot-ch.html">.ch</a>,
+<a href="https://cr.yp.to/djbdns/dot-de.html">.de</a>,
+<a href="https://cr.yp.to/djbdns/dot-dk.html">.dk</a>,
+<a href="https://cr.yp.to/djbdns/dot-fr.html">.fr</a>,
+<a href="https://cr.yp.to/djbdns/dot-hu.html">.hu</a>,
+<a href="https://cr.yp.to/djbdns/dot-it.html">.it</a>,
+<a href="https://cr.yp.to/djbdns/dot-nl.html">.nl</a>,
+<a href="https://cr.yp.to/djbdns/dot-no.html">.no</a>,
+<a href="https://cr.yp.to/djbdns/dot-ru.html">.ru</a>,
+<a href="https://cr.yp.to/djbdns/dot-us.html">.us</a>,
+<a href="https://cr.yp.to/djbdns/dot-arpa.html">.in-addr.arpa</a>,
+and
+<a href="https://cr.yp.to/djbdns/dot-local.html">local names</a>.
+Other top-level domains include
+.aero,
+.biz,
+.coop,
+.edu,
+.gov,
+.info,
+.int,
+.mil,
+.museum,
+and
+.name.
+<p>
+First, your server needs to accept the delegation.
+Your server will not answer questions about a name
+unless it knows that it is in charge of that name.
+The following commands tell the server that it is in charge
+of all names ending with <tt>heaven.af.mil</tt> and <tt>7.8.1.in-addr.arpa</tt>:
+</p><pre>     cd /service/tinydns/root
+     ./add-ns heaven.af.mil 1.8.7.200
+     ./add-ns heaven.af.mil 1.8.7.201
+     ./add-ns 7.8.1.in-addr.arpa 1.8.7.200
+     ./add-ns 7.8.1.in-addr.arpa 1.8.7.201
+     make
+</pre>
+These commands also tell the server
+<ul>
+<li>to advertise
+<tt>a.ns.heaven.af.mil</tt> with IP address 1.8.7.200
+and <tt>b.ns.heaven.af.mil</tt> with IP address 1.8.7.201
+as the <tt>heaven.af.mil</tt> DNS servers, and
+</li><li>to advertise
+<tt>a.ns.7.8.1.in-addr.arpa</tt> with IP address 1.8.7.200
+and <tt>b.ns.7.8.1.in-addr.arpa</tt> with IP address 1.8.7.201
+as the <tt>7.8.1.in-addr.arpa</tt> DNS servers.
+</li></ul>
+<p>
+Second, the parent server needs to delegate the name
+to your servers.
+Caches around the Internet
+will not ask your server about a name
+unless that name
+has been delegated
+to your servers.
+In the above example,
+</p><ul>
+<li>the administrator of <tt>af.mil</tt>
+needs to delegate <tt>heaven.af.mil</tt> to
+the server <tt>a.ns.heaven.af.mil</tt>
+running on IP address 1.8.7.200
+and the server <tt>b.ns.heaven.af.mil</tt>
+running on IP address 1.8.7.201,
+and
+</li><li>the administrator of <tt>8.1.in-addr.arpa</tt>
+needs to delegate <tt>7.8.1.in-addr.arpa</tt> to
+the server <tt>a.ns.7.8.1.in-addr.arpa</tt>
+running on IP address 1.8.7.200
+and the server <tt>b.ns.7.8.1.in-addr.arpa</tt>
+running on IP address 1.8.7.201.
+</li></ul>
+<p>
+To avoid triggering a
+<a href="https://cr.yp.to/djbdns/bugtraq/20000112082807-15140-qmail@cr-yp-to">BIND bug</a>,
+the parent server must use the <tt>a.ns</tt> and <tt>b.ns</tt> names,
+not alternate names with the same IP addresses.
+You can
+tell <tt>tinydns</tt> to use different names;
+in that case,
+the parent server
+will have to use those names.
+</p><h2><a name="add-host"></a>Publishing addresses of your computers</h2>
+Once a name such as <tt>heaven.af.mil</tt>
+has been delegated to your servers,
+you can publish an IP address for <tt>heaven.af.mil</tt>
+and for any name ending with <tt>.heaven.af.mil</tt>.
+<p>
+Common practice is to set up two types of names:
+</p><ul>
+<li>Computer names.
+Choose a name for each computer,
+and run <tt>add-host</tt> with the computer's name and IP address.
+You also have to tell the computer to
+<a href="https://cr.yp.to/djbdns/ifconfig.html">respond</a>
+to that IP address.
+</li><li>Service names.
+For each service (<tt>www</tt>, <tt>pop</tt>, etc.),
+run <tt>add-alias</tt>
+with the service's name and IP address.
+</li></ul>
+Distinguishing computer names from service names
+is helpful if you decide later
+to move a service from one computer to another.
+<p>
+For example,
+let's say you're the <tt>heaven.af.mil</tt> administrator;
+you have three computers, with IP addresses 1.8.7.4, 1.8.7.5, and 1.8.7.6;
+you have a web server running on the first computer;
+and you have an FTP server running on the first computer.
+You could name the computers <tt>lion</tt>, <tt>tiger</tt>, and <tt>bear</tt>,
+and run the following commands:
+</p><pre>     cd /service/tinydns/root
+     ./add-host lion.heaven.af.mil 1.8.7.4
+     ./add-host tiger.heaven.af.mil 1.8.7.5
+     ./add-host bear.heaven.af.mil 1.8.7.6
+     ./add-alias www.heaven.af.mil 1.8.7.4
+     ./add-alias ftp.heaven.af.mil 1.8.7.4
+     make
+</pre>
+The <tt>add-host</tt> and
+<tt>add-alias</tt> programs edit the file
+<tt>/service/tinydns/root/data</tt>,
+which is in
+<a href="https://cr.yp.to/djbdns/tinydns-data.html"><tt>tinydns-data</tt> format</a>.
+<tt>make</tt> runs the
+<tt>tinydns-data</tt> program
+to tell <tt>tinydns</tt> about the new information.
+If anything goes wrong,
+<tt>tinydns-data</tt> prints an error message,
+and <tt>tinydns</tt> continues providing the old information.
+<p>
+Now anyone around the Internet
+looking up <tt>lion.heaven.af.mil</tt>
+or <tt>www.heaven.af.mil</tt>
+or <tt>ftp.heaven.af.mil</tt>
+will see IP address 1.8.7.4.
+Anyone looking up the computer name for 1.8.7.4
+will see <tt>lion.heaven.af.mil</tt>.
+</p><p>
+As an alternative to <tt>add-host</tt> and <tt>add-alias</tt>,
+you can edit <tt>/service/tinydns/root/data</tt> manually,
+adding the following lines:
+</p><pre>     =lion.heaven.af.mil:1.8.7.4
+     =tiger.heaven.af.mil:1.8.7.5
+     =bear.heaven.af.mil:1.8.7.6
+     +www.heaven.af.mil:1.8.7.4
+     +ftp.heaven.af.mil:1.8.7.4
+</pre>
+There are two reasons to use
+the <tt>add-host</tt> and <tt>add-alias</tt> programs
+instead of editing <tt>data</tt> manually.
+First,
+<tt>add-host</tt>
+will prevent you from accidentally reusing a previous computer name,
+or reusing a previous computer IP address.
+Second,
+if you want to protect <tt>data</tt> against a sudden power outage,
+you have to copy it to <tt>data.tmp</tt>, edit <tt>data.tmp</tt>,
+sync <tt>data.tmp</tt> to disk,
+and use <tt>mv</tt> to rename <tt>data.tmp</tt> as <tt>data</tt>;
+<tt>add-host</tt> and <tt>add-alias</tt> do all this automatically.
+<p>
+<b>More on choosing names.</b>
+You should end up running <tt>add-host</tt>
+exactly once for each IP address,
+giving a different computer name to each IP address.
+You should not run <tt>add-alias</tt> for a computer name;
+there should be exactly one IP address for the computer name.
+</p><p>
+Here are some good sources of computer names:
+</p><ul>
+<li>Animals: lion, tiger, bear, etc.
+But don't use these if you're a biologist studying animals!
+Computer names should be words that you don't normally use in other contexts.
+</li><li>Planets: mercury, venus, mars, etc.
+But don't use these if you're an astronomer!
+</li><li>Deities: zeus, athena, hermes, etc.
+</li><li>Elements: hydrogen, helium, lithium, etc.
+</li><li>Flowers: tulip, rose, lilac, etc.
+</li></ul>
+<p>
+If you add a second IP address to a computer,
+it's generally a good idea to use <tt>add-host</tt> with a new name,
+as if the second IP address were actually on a separate computer:
+</p><pre>     ./add-host zebra.heaven.af.mil 1.8.7.240
+</pre>
+Then you won't have to change anything
+if that IP address is, in fact, moved to a separate computer.
+<h2><a name="testing"></a>Checking addresses of your computers</h2>
+Here is how to systematically verify that
+<tt>tinydns</tt> is publishing the right IP address for a name:
+for example, that it is publishing IP address 1.8.7.4
+for <tt>www.heaven.af.mil</tt>.
+<p>
+First, check that the address is in <tt>/service/tinydns/root/data</tt>
+in <tt>tinydns-data</tt> format:
+</p><pre>     +www.heaven.af.mil:1.8.7.4
+</pre>
+IP addresses can be assigned by <tt>+</tt> lines,
+<tt>=</tt> lines,
+<tt>@</tt> lines,
+<tt>.</tt> lines,
+and
+<tt>&amp;</tt> lines.
+<p>
+Second, use <tt>tinydns-get</tt> to check
+that the address is in <tt>/service/tinydns/root/data.cdb</tt>:
+</p><pre>     cd /service/tinydns/root
+     tinydns-get a www.heaven.af.mil
+</pre>
+The output will have a line saying
+<pre>     answer: www.heaven.af.mil 86400 A 1.8.7.4
+</pre>
+although perhaps with a number other than 86400.
+Common reasons that this answer is missing or obsolete:
+you didn't run <tt>make</tt> after changing <tt>data</tt>;
+you don't have <tt>.</tt> lines (or <tt>Z</tt> lines) in <tt>data</tt>
+specifying relevant name servers.
+<p>
+If you want to check reverse lookups,
+replace <tt>a www.heaven.af.mil</tt>
+with <tt>ptr 4.7.8.1.in-addr.arpa</tt>.
+</p><p>
+Third, check that the IP address of <tt>tinydns</tt>
+is one of this computer's addresses:
+</p><pre>     cat /service/tinydns/env/IP
+     netstat -n -i
+</pre>
+<p>
+Fourth, check that the <tt>tinydns</tt> service is up:
+</p><pre>     svstat /service/tinydns
+</pre>
+If <tt>tinydns-get</tt> reported more than 512 bytes,
+you also need
+<a href="https://cr.yp.to/djbdns/tcp.html">TCP service</a>;
+check that the <tt>axfrdns</tt> service is up.
+<p>
+Fifth, ask <tt>tinydns</tt> about the name:
+</p><pre>     dnsq a www.heaven.af.mil 1.8.7.200
+     dnsq a www.heaven.af.mil 1.8.7.201
+</pre>
+Here <tt>1.8.7.200</tt> and <tt>1.8.7.201</tt>
+are the IP addresses of your DNS servers.
+The output of <tt>dnsq</tt> should be identical
+to the previous output of <tt>tinydns-get</tt>.
+<p>
+Sixth, ask your DNS cache for the address:
+</p><pre>     dnsqr a www.heaven.af.mil
+</pre>
+If <tt>dnscache</tt> can't find the address,
+the problem is almost certainly that
+the parent servers haven't delegated the relevant domains
+to your <tt>tinydns</tt>.
+Read the log in <tt>/service/dnscache/log/main/current</tt>
+to see which servers <tt>dnscache</tt> is contacting
+and what information they are providing.
+For a thorough debugging scan,
+use <a href="https://cr.yp.to/djbdns/debugging.html#dnstrace"><tt>dnstrace</tt></a>.
+<p>
+Do not use
+<a href="https://cr.yp.to/djbdns/nslookup.html">nslookup</a>
+to test your DNS servers.
+</p><h2>Publishing mail server addresses</h2>
+When an Internet mail transfer agent
+wants to deliver mail addressed to <tt>heaven.af.mil</tt>,
+it looks up the IP address of <tt>heaven.af.mil</tt>,
+and tries to connect to an SMTP server at that IP address.
+You can use <tt>add-mx</tt> to specify a different IP address:
+<pre>     cd /service/tinydns/root
+     ./add-mx heaven.af.mil 1.8.7.193
+     make
+</pre>
+(<tt>mx</tt> stands for ``mail exchanger.'')
+As an alternative to <tt>add-mx</tt>,
+you can edit <tt>data</tt> manually,
+adding the following line:
+<pre>     @heaven.af.mil:1.8.7.193:a
+</pre>
+If you add several mail servers for <tt>heaven.af.mil</tt>,
+use <tt>a</tt> for the first, <tt>b</tt> for the second, etc.
+<tt>add-mx</tt> handles this automatically.
+<h2><a name="add-childns"></a>Delegating names to another server</h2>
+To delegate a name to a child server,
+run <tt>add-childns</tt> with the name being delegated
+and the IP address of the child server:
+<pre>     cd /service/tinydns/root
+     ./add-childns elysium.heaven.af.mil 1.2.3.144
+     make
+</pre>
+As an alternative to <tt>add-childns</tt>,
+you can edit <tt>data</tt> manually,
+adding the following line:
+<pre>     &amp;elysium.heaven.af.mil:1.2.3.144:a
+</pre>
+If you delegate <tt>heaven.af.mil</tt> to several IP addresses,
+use <tt>a</tt> for the first, <tt>b</tt> for the second, etc.
+<tt>add-childns</tt> handles this automatically.
+<p>
+You can select a server name
+other than the default <tt>a.ns.elysium.heaven.af.mil</tt>.
+To avoid triggering a
+<a href="https://cr.yp.to/djbdns/bugtraq/20000112082807-15140-qmail@cr-yp-to">BIND bug</a>,
+the parent server and the child server
+must use the same name for the child server.
+For example, if the child server is using
+</p><pre>     .elysium.heaven.af.mil:1.2.3.144:dns1.elysium.heaven.af.mil
+</pre>
+then the parent server must use the same name:
+<pre>     &amp;elysium.heaven.af.mil:1.2.3.144:dns1.elysium.heaven.af.mil
+</pre>
+Omit the IP address
+if the name already has an IP address assigned in another <tt>data</tt> line:
+<pre>     &amp;elysium.heaven.af.mil::dns1.elysium.heaven.af.mil
+</pre>
+<h2><a name="independent">Setting up independent DNS servers</a></h2>
+You can run several servers (on different IP addresses)
+with different <tt>data</tt> files.
+For example, you could set up four servers,
+with two servers publishing <tt>heaven.af.mil</tt> information,
+and two servers publishing <tt>panic.mil</tt> information.
+Changes to <tt>heaven.af.mil</tt>
+would be made on the first server and copied to the second.
+Changes to <tt>panic.mil</tt>
+would be made on the third server and copied to the fourth.
+<p>
+Of course,
+a single server can publish both <tt>heaven.af.mil</tt> and <tt>panic.mil</tt>.
+However, if you have a gigabyte of DNS data,
+you should consider running several independent servers,
+each with a fraction of the data.
+</p><h2><a name="move-zone">Moving a zone to an independent DNS server</a></h2>
+Here is how to move <tt>heaven.af.mil</tt>
+from two DNS servers on IP addresses 1.8.7.200 and 1.8.7.201
+to two independent DNS servers on IP addresses 1.8.11.50 and 1.8.11.51.
+<p>
+1. Copy all the <tt>heaven.af.mil</tt> data
+from the old servers to the new servers.
+</p><p>
+2. On the new servers,
+change the IP address of <tt>a.ns.heaven.af.mil</tt>
+from 1.8.7.200 to 1.8.11.50,
+by changing
+</p><pre>     .heaven.af.mil:1.8.7.200:a
+</pre>
+to
+<pre>     .heaven.af.mil:1.8.11.50:a
+</pre>
+in <tt>/service/tinydns/root/data</tt>.
+Similarly,
+change the IP address of <tt>b.ns.heaven.af.mil</tt>
+from 1.8.7.201 to 1.8.11.51.
+Type
+<pre>     make
+</pre>
+so that the new servers start publishing the new IP addresses.
+<p>
+3. Make the same changes on the parent servers.
+</p><p>
+4. Make the same changes on the old servers.
+This is important because caches can continue talking to the old servers
+for any length of time;
+caches are under no obligation to double-check with the parent servers.
+</p><p>
+5. Wait a few days for caches to stop contacting the old servers.
+If you make any changes to the <tt>heaven.af.mil</tt> data during this time,
+make the same changes on the old servers.
+</p><p>
+6. Remove the <tt>heaven.af.mil</tt> data from the old servers.
+That's it.
+
+
+</p></body></html>
