@@ -1,0 +1,10 @@
+# Makefile sample
+# /etc/tinydns/root/Makefile 
+#
+remote: data.cdb
+	rsync -az -e "ssh -p 6146" data.cdb root@meerkat.rajarshi.me:/service/tinydns/root/data.cdb
+	rsync -az -e "ssh -p 22" data.cdb root@falcon.rajarshi.me:/service/tinydns/root/data.cdb
+	rsync -az -e "ssh -p 22" data.cdb root@buzzard.rajarshi.me:/service/tinydns/root/data.cdb
+
+data.cdb: data
+	/usr/local/bin/tinydns-data
